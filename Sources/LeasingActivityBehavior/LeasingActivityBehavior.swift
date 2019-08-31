@@ -1,4 +1,4 @@
-class DealShell {
+public class DealShell {
   let repository: ServerRepository
   var deals: [Deal] = [] {
       didSet {
@@ -23,17 +23,17 @@ class DealShell {
   }
 }
 
-enum NetworkResult<T> {
+public enum NetworkResult<T> {
     case error
     case success(T)
 }
 
-struct Deal: Codable {
+public struct Deal: Codable {
     let id: Int?
     let requirementSize: Int
 }
 
-protocol ServerRepository {
+public protocol ServerRepository {
     var successfulResponse: Bool { get set }
     
     func createDeal(requirementSize: Int, onComplete: @escaping (NetworkResult<Deal>) -> Void)
