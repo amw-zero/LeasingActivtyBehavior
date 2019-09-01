@@ -5,7 +5,7 @@ public class DealShell {
           subscription(deals)
       }
   }
-  var subscription: ([Deal]) -> Void = { _ in }
+  public var subscription: ([Deal]) -> Void = { _ in }
   
   public init(repository: ServerRepository) {
       self.repository = repository
