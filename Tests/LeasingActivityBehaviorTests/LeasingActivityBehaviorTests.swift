@@ -1,21 +1,6 @@
 import XCTest
 @testable import LeasingActivityBehavior
 
-// struct StubServerRepository: ServerRepository {
-//   var successfulResponse: Bool = true
-//   static var dealCount = 0
-  
-//   func createDeal(requirementSize: Int, onComplete: @escaping (NetworkResult<Deal>) -> Void) {
-//     if successfulResponse {
-//       StubServerRepository.dealCount += 1
-//       onComplete(.success(Deal(id: StubServerRepository.dealCount, requirementSize: requirementSize)))
-//     } else {
-//       onComplete(.error)
-
-//     }
-//   }
-// }
-
 extension DealShell {
   func hasDeal(id: Int) -> Bool {
     deals.contains { $0.id == id }
@@ -25,7 +10,14 @@ extension DealShell {
 func makeDealShell(isResponseSuccessful: Bool = true) -> DealShell {
   let server = DealServer()
   server.successfulResponse = isResponseSuccessful
-  return DealShell(repository: server)
+  let dealCreateRepo: (Deal, @escaping (Deal) -> Void) -> Void = { deal, onComplete in
+    let dealWithId = Deal(id: 1, requirementSize: deal.requirementSize)
+    onComplete(dealWithId)
+  }
+
+  return DealShell { dealData, onComplete in
+    server.createDeal(data: dealData, repository: dealCreateRepo, onComplete: onComplete)
+  }
 }
 
 final class LeasingActivityBehaviorTests: XCTestCase {

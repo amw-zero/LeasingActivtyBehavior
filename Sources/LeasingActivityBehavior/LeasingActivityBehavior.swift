@@ -1,7 +1,7 @@
 import Foundation
 
 public class DealShell {
-  let repository: ServerRepository
+  let serverLinkage: ServerLinkage
   var deals: [Deal] = [] {
     didSet {
         subscription(deals)
@@ -9,8 +9,8 @@ public class DealShell {
   }
   public var subscription: ([Deal]) -> Void = { _ in }
   
-  public init(repository: ServerRepository) {
-    self.repository = repository
+  public init(serverLinkage: @escaping ServerLinkage) {
+    self.serverLinkage = serverLinkage
   }
   
   public func createDeal(requirementSize: Int) {
@@ -19,37 +19,50 @@ public class DealShell {
         "requirementSize": requirementSize
       ]
       let dealData = try JSONSerialization.data(withJSONObject: params, options: [])
-      repository.createDeal(data: dealData) { result in
-        switch result {
-        case let .success(deal):
-            self.deals = self.deals + [deal]
+      serverLinkage(dealData) { responseResult in
+        switch responseResult {
+        case let .success(data):
+            do {
+              let deal = try JSONDecoder().decode(Deal.self, from: data)
+              self.deals = self.deals + [deal]
+            } catch {
+
+            }
         default:
             break
         }
       }
     } catch {
-      return 
+
     }
-    
   }
 }
 
-public class DealServer: ServerRepository {
+public class DealServer {
   public var successfulResponse: Bool = true
+  public typealias DealFunc = (Deal) -> Void
+  public typealias DealCreateRepository = (Deal, @escaping DealFunc) -> Void
 
   public init() {
   }
 
-  public func createDeal(data: Data, onComplete: @escaping (NetworkResult<Deal>) -> Void) {
+  public func createDeal(data: Data, repository: DealCreateRepository, onComplete: @escaping (NetworkResult<Data>) -> Void) {
     if !successfulResponse {
       onComplete(.error)
       return
     }
 
     do {
-      let deal = try JSONDecoder().decode(Deal.self, from: data)
-      let dealWithId = Deal(id: 1, requirementSize: deal.requirementSize)
-      onComplete(.success(dealWithId))
+      let dealCreate = try JSONDecoder().decode(Deal.self, from: data)
+      repository(dealCreate) { deal in
+        do {
+          let dealData = try JSONEncoder().encode(deal)
+          onComplete(.success(dealData))
+        } catch {
+
+        }
+      }
+      
     } catch {
       onComplete(.error)
     }
@@ -71,8 +84,5 @@ public struct Deal: Codable {
   }
 }
 
-public protocol ServerRepository {
-  var successfulResponse: Bool { get set }
-  
-  func createDeal(data: Data, onComplete: @escaping (NetworkResult<Deal>) -> Void)
-}
+public typealias RequestFunc = (NetworkResult<Data>) -> Void
+public typealias ServerLinkage = (Data, @escaping RequestFunc) -> Void
