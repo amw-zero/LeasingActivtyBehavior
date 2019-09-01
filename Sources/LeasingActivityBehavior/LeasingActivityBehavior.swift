@@ -36,7 +36,10 @@ public class DealShell {
 }
 
 public class DealServer: ServerRepository {
-  public var successfulResponse: Bool = false
+  public var successfulResponse: Bool = true
+
+  public init() {
+  }
 
   public func createDeal(data: Data, onComplete: @escaping (NetworkResult<Deal>) -> Void) {
     if !successfulResponse {
