@@ -20,7 +20,6 @@ public class DealShell {
       ]
       let dealData = try JSONSerialization.data(withJSONObject: params, options: [])
       repository.createDeal(data: dealData) { result in
-        print(result)
         switch result {
         case let .success(deal):
             self.deals = self.deals + [deal]
@@ -48,7 +47,6 @@ public class DealServer: ServerRepository {
     }
 
     do {
-
       let deal = try JSONDecoder().decode(Deal.self, from: data)
       let dealWithId = Deal(id: 1, requirementSize: deal.requirementSize)
       onComplete(.success(dealWithId))
