@@ -1,3 +1,5 @@
+import Foundation
+
 public class DealShell {
   let repository: ServerRepository
   var deals: [Deal] = [] {
@@ -12,13 +14,43 @@ public class DealShell {
   }
   
   public func createDeal(requirementSize: Int) {
-    repository.createDeal(requirementSize: requirementSize) { result in
+    do {
+      let params = [
+        "requirementSize": requirementSize
+      ]
+      let dealData = try JSONSerialization.data(withJSONObject: params, options: [])
+      repository.createDeal(data: dealData) { result in
+        print(result)
         switch result {
         case let .success(deal):
             self.deals = self.deals + [deal]
         default:
             break
         }
+      }
+    } catch {
+      return 
+    }
+    
+  }
+}
+
+public class DealServer: ServerRepository {
+  public var successfulResponse: Bool = false
+
+  public func createDeal(data: Data, onComplete: @escaping (NetworkResult<Deal>) -> Void) {
+    if !successfulResponse {
+      onComplete(.error)
+      return
+    }
+
+    do {
+
+      let deal = try JSONDecoder().decode(Deal.self, from: data)
+      let dealWithId = Deal(id: 1, requirementSize: deal.requirementSize)
+      onComplete(.success(dealWithId))
+    } catch {
+      onComplete(.error)
     }
   }
 }
@@ -41,5 +73,5 @@ public struct Deal: Codable {
 public protocol ServerRepository {
   var successfulResponse: Bool { get set }
   
-  func createDeal(requirementSize: Int, onComplete: @escaping (NetworkResult<Deal>) -> Void)
+  func createDeal(data: Data, onComplete: @escaping (NetworkResult<Deal>) -> Void)
 }
