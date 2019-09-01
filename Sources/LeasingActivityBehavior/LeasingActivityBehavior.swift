@@ -7,11 +7,11 @@ public class DealShell {
   }
   var subscription: ([Deal]) -> Void = { _ in }
   
-  init(repository: ServerRepository) {
+  public init(repository: ServerRepository) {
       self.repository = repository
   }
   
-  func createDeal(requirementSize: Int) {
+  public func createDeal(requirementSize: Int) {
       repository.createDeal(requirementSize: requirementSize) { result in
           switch result {
           case let .success(deal):
@@ -29,8 +29,13 @@ public enum NetworkResult<T> {
 }
 
 public struct Deal: Codable {
-    let id: Int?
-    let requirementSize: Int
+    public let id: Int?
+    public let requirementSize: Int
+
+    public init(id: Int?, requirementSize: Int) {
+      self.id = id
+      self.requirementSize = requirementSize
+    }
 }
 
 public protocol ServerRepository {
