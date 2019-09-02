@@ -1,7 +1,7 @@
 import Foundation
 
 public class DealShell {
-    let serverLinkage: ServerLinkage
+    let serverRepository: ServerRepository
     var deals: [Deal] = [] {
         didSet {
             subscription(deals)
@@ -9,8 +9,8 @@ public class DealShell {
     }
     public var subscription: ([Deal]) -> Void = { _ in }
     
-    public init(serverLinkage: @escaping ServerLinkage) {
-        self.serverLinkage = serverLinkage
+    public init(serverRepository: ServerRepository) {
+        self.serverRepository = serverRepository
     }
     
     public func createDeal(requirementSize: Int) {
@@ -19,7 +19,7 @@ public class DealShell {
                 "requirementSize": requirementSize
             ]
             let dealData = try JSONSerialization.data(withJSONObject: params, options: [])
-            serverLinkage(dealData) { responseResult in
+            serverRepository.createDeal(data: dealData) { responseResult in
                 switch responseResult {
                 case let .success(data):
                     do {
@@ -38,15 +38,17 @@ public class DealShell {
     }
 }
 
-public class DealServer {
+public class DealServer: ServerRepository {
     public var successfulResponse: Bool = true
     public typealias DealFunc = (Deal) -> Void
     public typealias DealCreateRepository = (Deal, @escaping DealFunc) -> Void
+    let repository: DealCreateRepository
     
-    public init() {
+    public init(repository: @escaping DealCreateRepository) {
+        self.repository = repository
     }
     
-    public func createDeal(data: Data, repository: DealCreateRepository, onComplete: @escaping (NetworkResult<Data>) -> Void) {
+    public func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void) {
         if !successfulResponse {
             onComplete(.error)
             return
@@ -84,5 +86,8 @@ public struct Deal: Codable {
     }
 }
 
-public typealias RequestFunc = (NetworkResult<Data>) -> Void
-public typealias ServerLinkage = (Data, @escaping RequestFunc) -> Void
+public protocol ServerRepository {
+  var successfulResponse: Bool { get set }
+
+  func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
+}

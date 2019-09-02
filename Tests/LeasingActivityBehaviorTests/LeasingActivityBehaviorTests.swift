@@ -8,16 +8,15 @@ extension DealShell {
 }
 
 func makeDealShell(isResponseSuccessful: Bool = true) -> DealShell {
-  let server = DealServer()
-  server.successfulResponse = isResponseSuccessful
   let dealCreateRepo: (Deal, @escaping (Deal) -> Void) -> Void = { deal, onComplete in
     let dealWithId = Deal(id: 1, requirementSize: deal.requirementSize)
     onComplete(dealWithId)
   }
+    
+    let server = DealServer(repository: dealCreateRepo)
+    server.successfulResponse = isResponseSuccessful
 
-  return DealShell { dealData, onComplete in
-    server.createDeal(data: dealData, repository: dealCreateRepo, onComplete: onComplete)
-  }
+  return DealShell(serverRepository: server)
 }
 
 final class LeasingActivityBehaviorTests: XCTestCase {
