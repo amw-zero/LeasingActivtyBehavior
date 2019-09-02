@@ -1,7 +1,7 @@
 import Foundation
 
 public class DealShell {
-    let serverLinkage: ServerLinkage
+    let serverRepository: ServerRepository
     var deals: [Deal] = [] {
         didSet {
             subscription(deals)
@@ -9,8 +9,12 @@ public class DealShell {
     }
     public var subscription: ([Deal]) -> Void = { _ in }
     
-    public init(serverLinkage: @escaping ServerLinkage) {
-        self.serverLinkage = serverLinkage
+    var dealCount: Int {
+        return deals.count
+    }
+    
+    public init(serverRepository: ServerRepository) {
+        self.serverRepository = serverRepository
     }
     
     public func createDeal(requirementSize: Int) {
@@ -18,35 +22,50 @@ public class DealShell {
             let params = [
                 "requirementSize": requirementSize
             ]
-            let dealData = try JSONSerialization.data(withJSONObject: params, options: [])
-            serverLinkage(dealData) { responseResult in
+            guard let dealData = try? JSONSerialization.data(withJSONObject: params, options: []) else {
+                return
+            }
+            serverRepository.createDeal(data: dealData) { responseResult in
                 switch responseResult {
                 case let .success(data):
-                    do {
-                        let deal = try JSONDecoder().decode(Deal.self, from: data)
-                        self.deals = self.deals + [deal]
-                    } catch {
-                        
-                    }
+                    let deal = try? JSONDecoder().decode(Deal.self, from: data)
+                    if let deal = deal { self.deals += [deal] }
                 default:
                     break
                 }
             }
-        } catch {
-            
+        }
+    }
+    
+    public func viewDeals() {
+        serverRepository.viewDeals { responseResult in
+            switch responseResult {
+            case let .success(data):
+                let deals = (try? JSONDecoder().decode([Deal].self, from: data)) ?? []
+                self.deals = deals
+            default:
+                break
+            }
         }
     }
 }
 
-public class DealServer {
+public class DealServer: ServerRepository {
     public var successfulResponse: Bool = true
     public typealias DealFunc = (Deal) -> Void
+    public typealias DealsFunc = ([Deal]) -> Void
     public typealias DealCreateRepository = (Deal, @escaping DealFunc) -> Void
+    public typealias DealIndexRepository = (@escaping DealsFunc) -> Void
+
+    let createRepository: DealCreateRepository
+    let indexRepository: DealIndexRepository
     
-    public init() {
+    public init(createRepository: @escaping DealCreateRepository, indexRepository: @escaping DealIndexRepository) {
+        self.createRepository = createRepository
+        self.indexRepository = indexRepository
     }
     
-    public func createDeal(data: Data, repository: DealCreateRepository, onComplete: @escaping (NetworkResult<Data>) -> Void) {
+    public func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void) {
         if !successfulResponse {
             onComplete(.error)
             return
@@ -54,17 +73,28 @@ public class DealServer {
         
         do {
             let dealCreate = try JSONDecoder().decode(Deal.self, from: data)
-            repository(dealCreate) { deal in
+            createRepository(dealCreate) { deal in
                 do {
                     let dealData = try JSONEncoder().encode(deal)
                     onComplete(.success(dealData))
                 } catch {
-                    
+                    onComplete(.error)
                 }
             }
             
         } catch {
             onComplete(.error)
+        }
+    }
+    
+    public func viewDeals(onComplete: @escaping (NetworkResult<Data>) -> Void) {
+        indexRepository { dealData in
+            guard let dealData = try? JSONEncoder().encode(dealData) else {
+                onComplete(.error)
+                return
+            }
+            
+            onComplete(.success(dealData))
         }
     }
 }
@@ -84,5 +114,9 @@ public struct Deal: Codable {
     }
 }
 
-public typealias RequestFunc = (NetworkResult<Data>) -> Void
-public typealias ServerLinkage = (Data, @escaping RequestFunc) -> Void
+public protocol ServerRepository {
+  var successfulResponse: Bool { get set }
+
+  func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
+  func viewDeals(onComplete: @escaping (NetworkResult<Data>) -> Void)
+}
