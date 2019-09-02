@@ -18,22 +18,30 @@ public class DealShell {
             let params = [
                 "requirementSize": requirementSize
             ]
-            let dealData = try JSONSerialization.data(withJSONObject: params, options: [])
+            guard let dealData = try? JSONSerialization.data(withJSONObject: params, options: []) else {
+                return
+            }
             serverRepository.createDeal(data: dealData) { responseResult in
                 switch responseResult {
                 case let .success(data):
-                    do {
-                        let deal = try JSONDecoder().decode(Deal.self, from: data)
-                        self.deals = self.deals + [deal]
-                    } catch {
-                        
-                    }
+                    let deal = try? JSONDecoder().decode(Deal.self, from: data)
+                    if let deal = deal { self.deals += [deal] }
                 default:
                     break
                 }
             }
-        } catch {
-            
+        }
+    }
+    
+    public func viewDeals() {
+        serverRepository.viewDeals { responseResult in
+            switch responseResult {
+            case let .success(data):
+                let deals = (try? JSONDecoder().decode([Deal].self, from: data)) ?? []
+                self.deals = deals
+            default:
+                break
+            }
         }
     }
 }
@@ -41,11 +49,16 @@ public class DealShell {
 public class DealServer: ServerRepository {
     public var successfulResponse: Bool = true
     public typealias DealFunc = (Deal) -> Void
+    public typealias DealsFunc = ([Deal]) -> Void
     public typealias DealCreateRepository = (Deal, @escaping DealFunc) -> Void
-    let repository: DealCreateRepository
+    public typealias DealIndexRepository = (@escaping DealsFunc) -> Void
+
+    let createRepository: DealCreateRepository
+    let indexRepository: DealIndexRepository
     
-    public init(repository: @escaping DealCreateRepository) {
-        self.repository = repository
+    public init(createRepository: @escaping DealCreateRepository, indexRepository: @escaping DealIndexRepository) {
+        self.createRepository = createRepository
+        self.indexRepository = indexRepository
     }
     
     public func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void) {
@@ -56,17 +69,28 @@ public class DealServer: ServerRepository {
         
         do {
             let dealCreate = try JSONDecoder().decode(Deal.self, from: data)
-            repository(dealCreate) { deal in
+            createRepository(dealCreate) { deal in
                 do {
                     let dealData = try JSONEncoder().encode(deal)
                     onComplete(.success(dealData))
                 } catch {
-                    
+                    onComplete(.error)
                 }
             }
             
         } catch {
             onComplete(.error)
+        }
+    }
+    
+    public func viewDeals(onComplete: @escaping (NetworkResult<Data>) -> Void) {
+        indexRepository { dealData in
+            guard let dealData = try? JSONEncoder().encode(dealData) else {
+                onComplete(.error)
+                return
+            }
+            
+            onComplete(.success(dealData))
         }
     }
 }
@@ -90,4 +114,5 @@ public protocol ServerRepository {
   var successfulResponse: Bool { get set }
 
   func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
+  func viewDeals(onComplete: @escaping (NetworkResult<Data>) -> Void)
 }
