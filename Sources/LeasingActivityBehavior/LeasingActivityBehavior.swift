@@ -9,6 +9,10 @@ public class DealShell {
     }
     public var subscription: ([Deal]) -> Void = { _ in }
     
+    var dealCount: Int {
+        return deals.count
+    }
+    
     public init(serverRepository: ServerRepository) {
         self.serverRepository = serverRepository
     }

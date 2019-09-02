@@ -11,15 +11,21 @@ extension DealShell {
     }
 }
 
+extension Deal {
+    static func make(id: Int = 1, requirementSize: Int = 100) -> Deal {
+        return Deal(id: id, requirementSize: requirementSize)
+    }
+}
+
 let dealCreateRepo: (Deal, @escaping (Deal) -> Void) -> Void = { deal, onComplete in
-  let dealWithId = Deal(id: 1, requirementSize: deal.requirementSize)
+    let dealWithId = Deal.make(id: 1, requirementSize: deal.requirementSize)
   onComplete(dealWithId)
 }
 
 let dealIndexRepository: (@escaping DealServer.DealsFunc) -> Void = { onComplete in
     onComplete([
-        Deal(id: 1, requirementSize: 100),
-        Deal(id: 2, requirementSize: 200),
+        Deal.make(id: 1, requirementSize: 100),
+        Deal.make(id: 2, requirementSize: 200),
     ])
 }
 
@@ -60,11 +66,13 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         XCTAssertEqual(shell.requirementSize(at: 1), 200)
     }
     
-//    func testViewingDealListWithNoDeals() {
-//        let shell = makeDealShell()
-//
-//        shell.viewDeals()
-//
-//        XCTAssertEqual(shell.dealCount, 0)
-//    }
+    func testViewingDealListWithNoDeals() {
+        let shell = makeDealShell(indexRepository: { onComplete in
+            onComplete([Deal]())
+        })
+
+        shell.viewDeals()
+
+        XCTAssertEqual(shell.dealCount, 0)
+    }
 }
