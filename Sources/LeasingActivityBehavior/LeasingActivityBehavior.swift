@@ -17,9 +17,10 @@ public class DealShell {
         self.serverRepository = serverRepository
     }
     
-    public func createDeal(requirementSize: Int) {
-        let params = [
-            "requirementSize": requirementSize
+    public func createDeal(requirementSize: Int, tenantName: String) {
+        let params: [String: Any] = [
+            "requirementSize": requirementSize,
+            "tenantName": tenantName
         ]
         guard let dealData = try? JSONSerialization.data(withJSONObject: params, options: []) else {
             return
@@ -102,10 +103,12 @@ public enum NetworkResult<T> {
 public struct Deal: Codable {
     public let id: Int?
     public let requirementSize: Int
+    let tenantName: String
     
-    public init(id: Int?, requirementSize: Int) {
+    public init(id: Int?, requirementSize: Int, tenantName: String) {
         self.id = id
         self.requirementSize = requirementSize
+        self.tenantName = tenantName
     }
 }
 

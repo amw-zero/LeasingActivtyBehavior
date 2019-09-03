@@ -9,11 +9,15 @@ extension DealShell {
     func requirementSize(at index: Int) -> Int {
         deals[index].requirementSize
     }
+    
+    func tenantName(at index: Int) -> String {
+        deals[index].tenantName
+    }
 }
 
 extension Deal {
-    static func make(id: Int = 1, requirementSize: Int = 100) -> Deal {
-        return Deal(id: id, requirementSize: requirementSize)
+    static func make(id: Int = 1, requirementSize: Int = 100, tenantName: String = "Company") -> Deal {
+        return Deal(id: id, requirementSize: requirementSize, tenantName: tenantName)
     }
 }
 
@@ -44,7 +48,7 @@ final class LeasingActivityBehaviorTests: XCTestCase {
     func testCreatingADealSuccessfully() {
         let shell = makeDealShell()
         
-        shell.createDeal(requirementSize: 1000)
+        shell.createDeal(requirementSize: 1000, tenantName: "Test Tenant")
         
         XCTAssertTrue(shell.hasDeal(id: 1))
     }
@@ -52,7 +56,7 @@ final class LeasingActivityBehaviorTests: XCTestCase {
     func testCreatingADealError() {
         let shell = makeDealShell(isResponseSuccessful: false)
         
-        shell.createDeal(requirementSize: 1000)
+        shell.createDeal(requirementSize: 1000, tenantName: "Test Tenant")
         
         XCTAssertFalse(shell.hasDeal(id: 1))
     }
@@ -63,7 +67,10 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         shell.viewDeals()
         
         XCTAssertEqual(shell.requirementSize(at: 0), 100)
+        XCTAssertEqual(shell.tenantName(at: 0), "Company")
+        
         XCTAssertEqual(shell.requirementSize(at: 1), 200)
+        XCTAssertEqual(shell.tenantName(at: 1), "Company")
     }
     
     func testViewingDealListWithNoDeals() {
