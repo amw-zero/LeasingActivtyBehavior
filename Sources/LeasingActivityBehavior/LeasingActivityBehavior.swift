@@ -103,7 +103,7 @@ public enum NetworkResult<T> {
 public struct Deal: Codable {
     public let id: Int?
     public let requirementSize: Int
-    let tenantName: String
+    public let tenantName: String
     
     public init(id: Int?, requirementSize: Int, tenantName: String) {
         self.id = id
