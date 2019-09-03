@@ -82,4 +82,18 @@ final class LeasingActivityBehaviorTests: XCTestCase {
 
         XCTAssertEqual(shell.dealCount, 0)
     }
+    
+    func testFilteringDealListByTenantName() {
+        let deals = [
+            Deal.make(tenantName: "Tenant 1"),
+            Deal.make(tenantName: "Tenant 2"),
+        ]
+        let shell = makeDealShell(indexRepository: { onComplete in
+            onComplete(deals)
+        })
+        
+        shell.viewDeals(filter: .tenantName("Tenant 2"))
+        
+        XCTAssertEqual(shell.tenantName(at: 0), "Tenant 2")
+    }
 }

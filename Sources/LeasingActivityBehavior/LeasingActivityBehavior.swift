@@ -1,5 +1,10 @@
 import Foundation
 
+public enum DealFilter {
+    case all
+    case tenantName(String)
+}
+
 public class DealShell {
     let serverRepository: ServerRepository
     var deals: [Deal] = [] {
@@ -36,8 +41,8 @@ public class DealShell {
         }
     }
     
-    public func viewDeals() {
-        serverRepository.viewDeals { responseResult in
+    public func viewDeals(filter: DealFilter = .all) {
+        serverRepository.viewDeals(filter: filter) { responseResult in
             switch responseResult {
             case let .success(data):
                 let deals = (try? JSONDecoder().decode([Deal].self, from: data)) ?? []
@@ -83,7 +88,7 @@ public struct DealServer: ServerRepository {
         }
     }
     
-    public func viewDeals(onComplete: @escaping (NetworkResult<Data>) -> Void) {
+    public func viewDeals(filter: DealFilter, onComplete: @escaping (NetworkResult<Data>) -> Void) {
         indexRepository { dealData in
             guard let dealData = try? JSONEncoder().encode(dealData) else {
                 onComplete(.error)
@@ -113,8 +118,8 @@ public struct Deal: Codable {
 }
 
 public protocol ServerRepository {
-  var successfulResponse: Bool { get set }
+    var successfulResponse: Bool { get set }
 
-  func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
-  func viewDeals(onComplete: @escaping (NetworkResult<Data>) -> Void)
+    func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
+    func viewDeals(filter: DealFilter, onComplete: @escaping (NetworkResult<Data>) -> Void)
 }
