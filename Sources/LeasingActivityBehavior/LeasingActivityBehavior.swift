@@ -18,21 +18,19 @@ public class DealShell {
     }
     
     public func createDeal(requirementSize: Int) {
-        do {
-            let params = [
-                "requirementSize": requirementSize
-            ]
-            guard let dealData = try? JSONSerialization.data(withJSONObject: params, options: []) else {
-                return
-            }
-            serverRepository.createDeal(data: dealData) { responseResult in
-                switch responseResult {
-                case let .success(data):
-                    let deal = try? JSONDecoder().decode(Deal.self, from: data)
-                    if let deal = deal { self.deals += [deal] }
-                default:
-                    break
-                }
+        let params = [
+            "requirementSize": requirementSize
+        ]
+        guard let dealData = try? JSONSerialization.data(withJSONObject: params, options: []) else {
+            return
+        }
+        serverRepository.createDeal(data: dealData) { responseResult in
+            switch responseResult {
+            case let .success(data):
+                let deal = try? JSONDecoder().decode(Deal.self, from: data)
+                if let deal = deal { self.deals += [deal] }
+            default:
+                break
             }
         }
     }
