@@ -34,7 +34,7 @@ func makeDealShell(
     createRepository: @escaping DealServer.DealCreateRepository = dealCreateRepo,
     indexRepository: @escaping DealServer.DealIndexRepository = dealIndexRepository
 ) -> DealShell {
-    let server = DealServer(createRepository: createRepository, indexRepository: indexRepository)
+    var server = DealServer(createRepository: createRepository, indexRepository: indexRepository)
     server.successfulResponse = isResponseSuccessful
 
     return DealShell(serverRepository: server)

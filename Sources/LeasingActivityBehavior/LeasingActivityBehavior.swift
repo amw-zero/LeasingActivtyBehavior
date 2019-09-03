@@ -50,7 +50,7 @@ public class DealShell {
     }
 }
 
-public class DealServer: ServerRepository {
+public struct DealServer: ServerRepository {
     public var successfulResponse: Bool = true
     public typealias DealFunc = (Deal) -> Void
     public typealias DealsFunc = ([Deal]) -> Void
@@ -71,19 +71,19 @@ public class DealServer: ServerRepository {
             return
         }
         
-        do {
-            let dealCreate = try JSONDecoder().decode(Deal.self, from: data)
-            createRepository(dealCreate) { deal in
-                do {
-                    let dealData = try JSONEncoder().encode(deal)
-                    onComplete(.success(dealData))
-                } catch {
-                    onComplete(.error)
-                }
-            }
-            
-        } catch {
+
+        guard let dealCreate = try? JSONDecoder().decode(Deal.self, from: data) else {
             onComplete(.error)
+            return
+        }
+        
+        createRepository(dealCreate) { deal in
+            guard let dealData = try? JSONEncoder().encode(deal) else {
+                onComplete(.error)
+                return
+            }
+
+            onComplete(.success(dealData))
         }
     }
     
