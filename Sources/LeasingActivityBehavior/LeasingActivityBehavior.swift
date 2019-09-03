@@ -68,13 +68,10 @@ public struct DealServer: ServerRepository {
             onComplete(.error)
             return
         }
-        
-
         guard let dealCreate = try? JSONDecoder().decode(Deal.self, from: data) else {
             onComplete(.error)
             return
         }
-        
         createRepository(dealCreate) { deal in
             guard let dealData = try? JSONEncoder().encode(deal) else {
                 onComplete(.error)
