@@ -59,7 +59,7 @@ public struct DealServer: ServerRepository {
     public typealias DealFunc = (Deal) -> Void
     public typealias DealsFunc = ([Deal]) -> Void
     public typealias DealCreateRepository = (Deal, @escaping DealFunc) -> Void
-    public typealias DealIndexRepository = (@escaping DealsFunc) -> Void
+    public typealias DealIndexRepository = (DealFilter, @escaping DealsFunc) -> Void
 
     let createRepository: DealCreateRepository
     let indexRepository: DealIndexRepository
@@ -89,7 +89,7 @@ public struct DealServer: ServerRepository {
     }
     
     public func viewDeals(filter: DealFilter, onComplete: @escaping (NetworkResult<Data>) -> Void) {
-        indexRepository { dealData in
+        indexRepository(filter) { dealData in
             guard let dealData = try? JSONEncoder().encode(dealData) else {
                 onComplete(.error)
                 return
