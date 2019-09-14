@@ -15,12 +15,6 @@ extension DealShell {
     }
 }
 
-extension Deal {
-    static func make(id: Int = 1, requirementSize: Int = 100, tenantName: String = "Company") -> Deal {
-        return Deal(id: id, requirementSize: requirementSize, tenantName: tenantName)
-    }
-}
-
 let dealCreateRepository: (Deal, @escaping (Deal) -> Void) -> Void = { deal, onComplete in
     let dealWithId = Deal.make(id: 1, requirementSize: deal.requirementSize)
     onComplete(dealWithId)
@@ -41,28 +35,6 @@ let dealIndexRepository = makeDealIndexRepository(deals: [
     Deal.make(id: 1, requirementSize: 100),
     Deal.make(id: 2, requirementSize: 200),
 ])
-
-func indexRepositoryContract(_ repoFactory: @escaping ([Deal]) -> (DealFilter, @escaping DealServer.DealsFunc) -> Void, onComplete: @escaping (Bool) -> Void) {
-    func verifyAllFilter(onComplete: @escaping (Bool) -> Void) {
-        let deals = [Deal.make()]
-        repoFactory(deals)(.all) { indexDeals in
-            onComplete(deals.map { $0.id } == indexDeals.map { $0.id })
-        }
-    }
-    
-    func verifyTenantNameFilter(onComplete: @escaping (Bool) -> Void) {
-        let deals = [Deal.make(tenantName: "Tenant 1"), Deal.make(tenantName: "Tenant 2")]
-        repoFactory(deals)(.tenantName("Tenant 2")) { indexDeals in
-            onComplete(indexDeals.map { $0.tenantName } == ["Tenant 2"])
-        }
-    }
-    
-    verifyAllFilter { allFilterSucceeded in
-        verifyTenantNameFilter { tenantNameFilterSucceeded in
-            onComplete(allFilterSucceeded && tenantNameFilterSucceeded)
-        }
-    }
-}
 
 func makeDealShell(
     isResponseSuccessful: Bool = true,

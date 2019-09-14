@@ -123,3 +123,31 @@ public protocol ServerRepository {
     func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
     func viewDeals(filter: DealFilter, onComplete: @escaping (NetworkResult<Data>) -> Void)
 }
+
+public func indexRepositoryContract(_ repoFactory: @escaping ([Deal]) -> (DealFilter, @escaping DealServer.DealsFunc) -> Void, onComplete: @escaping (Bool) -> Void) {
+    func verifyAllFilter(onComplete: @escaping (Bool) -> Void) {
+        let deals = [Deal.make()]
+        repoFactory(deals)(.all) { indexDeals in
+            onComplete(deals.map { $0.id } == indexDeals.map { $0.id })
+        }
+    }
+    
+    func verifyTenantNameFilter(onComplete: @escaping (Bool) -> Void) {
+        let deals = [Deal.make(tenantName: "Tenant 1"), Deal.make(tenantName: "Tenant 2")]
+        repoFactory(deals)(.tenantName("Tenant 2")) { indexDeals in
+            onComplete(indexDeals.map { $0.tenantName } == ["Tenant 2"])
+        }
+    }
+    
+    verifyAllFilter { allFilterSucceeded in
+        verifyTenantNameFilter { tenantNameFilterSucceeded in
+            onComplete(allFilterSucceeded && tenantNameFilterSucceeded)
+        }
+    }
+}
+
+extension Deal {
+    static public func make(id: Int = 1, requirementSize: Int = 100, tenantName: String = "Company") -> Deal {
+        return Deal(id: id, requirementSize: requirementSize, tenantName: tenantName)
+    }
+}
