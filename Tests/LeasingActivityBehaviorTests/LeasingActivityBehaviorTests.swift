@@ -42,23 +42,26 @@ let dealIndexRepository = makeDealIndexRepository(deals: [
     Deal.make(id: 2, requirementSize: 200),
 ])
 
-func indexRepositoryContract(_ repoFactory: ([Deal]) -> (DealFilter, @escaping DealServer.DealsFunc) -> Void) {
-    func verifyAllFilter() {
+func indexRepositoryContract(_ repoFactory: @escaping ([Deal]) -> (DealFilter, @escaping DealServer.DealsFunc) -> Void, onComplete: @escaping (Bool) -> Void) {
+    func verifyAllFilter(onComplete: @escaping (Bool) -> Void) {
         let deals = [Deal.make()]
         repoFactory(deals)(.all) { indexDeals in
-            XCTAssertEqual(deals.map { $0.id }, indexDeals.map { $0.id })
+            onComplete(deals.map { $0.id } == indexDeals.map { $0.id })
         }
     }
     
-    func verifyTenantNameFilter() {
+    func verifyTenantNameFilter(onComplete: @escaping (Bool) -> Void) {
         let deals = [Deal.make(tenantName: "Tenant 1"), Deal.make(tenantName: "Tenant 2")]
         repoFactory(deals)(.tenantName("Tenant 2")) { indexDeals in
-            XCTAssertEqual(indexDeals.map { $0.tenantName }, ["Tenant 2"])
+            onComplete(indexDeals.map { $0.tenantName } == ["Tenant 2"])
         }
     }
     
-    verifyAllFilter()
-    verifyTenantNameFilter()
+    verifyAllFilter { allFilterSucceeded in
+        verifyTenantNameFilter { tenantNameFilterSucceeded in
+            onComplete(allFilterSucceeded && tenantNameFilterSucceeded)
+        }
+    }
 }
 
 func makeDealShell(
@@ -111,7 +114,7 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         XCTAssertEqual(shell.dealCount, 0)
     }
     
-    func testFilteringDealListByTenantName() {
+    func testFilteringDealListByTenantNameWhenResultsAreFound() {
         let shell = makeDealShell(indexRepository: makeDealIndexRepository(deals: [
             Deal.make(tenantName: "Tenant 1"),
             Deal.make(tenantName: "Tenant 2"),
@@ -122,7 +125,24 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         XCTAssertEqual(shell.tenantName(at: 0), "Tenant 2")
     }
     
+    func testFilteringDealListByTenantNameWhenResultsAreNotFound() {
+        let shell = makeDealShell(indexRepository: makeDealIndexRepository(deals: [
+            Deal.make(tenantName: "Tenant 1"),
+            Deal.make(tenantName: "Tenant 2"),
+        ]))
+        
+        shell.viewDeals(filter: .tenantName("Tenant 3"))
+        
+        XCTAssertEqual(shell.dealCount, 0)
+    }
+    
     func testFakeIndexRepositoryContract() {
-        indexRepositoryContract(makeDealIndexRepository)
+        let expectation = self.expectation(description: "Index Repository Contract")
+        indexRepositoryContract(makeDealIndexRepository) { success in
+            expectation.fulfill()
+            XCTAssert(success)
+        }
+        
+        wait(for: [expectation], timeout: 5.0)
     }
 }
