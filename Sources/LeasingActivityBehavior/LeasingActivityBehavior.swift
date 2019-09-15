@@ -47,6 +47,24 @@ public class DealShell {
         self.serverRepository = serverRepository
     }
     
+    public func addComment(_ comment: String, toDealWithId dealId: Int) {
+        if let dealIndex = deals.firstIndex(where: { $0.id == dealId }) {
+            let deal = deals[dealIndex]
+            let comments: [String]
+            if let dealComments = deal.comments {
+                comments = dealComments + [comment]
+            } else {
+                comments = [comment]
+            }
+            deals[dealIndex] = Deal(
+                id: deal.id,
+                requirementSize: deal.requirementSize,
+                tenantName: deal.tenantName,
+                comments: comments
+            )
+        }
+    }
+    
     public func createDeal(requirementSize: Int, tenantName: String) {
         let params: [String: Any] = [
             "requirementSize": requirementSize,
@@ -135,11 +153,13 @@ public struct Deal: Codable {
     public let id: Int?
     public let requirementSize: Int
     public let tenantName: String
+    public let comments: [String]?
     
-    public init(id: Int?, requirementSize: Int, tenantName: String) {
+    public init(id: Int?, requirementSize: Int, tenantName: String, comments: [String] = []) {
         self.id = id
         self.requirementSize = requirementSize
         self.tenantName = tenantName
+        self.comments = comments
     }
 }
 

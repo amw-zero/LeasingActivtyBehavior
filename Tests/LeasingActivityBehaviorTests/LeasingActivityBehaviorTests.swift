@@ -13,6 +13,10 @@ extension DealShell {
     func tenantName(at index: Int) -> String {
         deals[index].tenantName
     }
+    
+    func comment(_ commentIndex: Int, atDealIndex dealIndex: Int) -> String? {
+        deals[dealIndex].comments?[commentIndex]
+    }
 }
 
 let dealCreateRepository: (Deal, @escaping (Deal) -> Void) -> Void = { deal, onComplete in
@@ -110,6 +114,16 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         shell.viewDeals(filter: .tenantName("Tenant 3"))
         
         XCTAssertEqual(shell.dealCount, 0)
+    }
+    
+    func testAddingACommentToADeal() {
+        let deal = Deal.make(id: 1, requirementSize: 123, tenantName: "Test Tenant")
+        let shell = makeDealShell(indexRepository: makeDealIndexRepository(deals: [deal]))
+
+        shell.viewDeals()
+        shell.addComment("Test Comment", toDealWithId: 1)
+        
+        XCTAssertEqual(shell.comment(0, atDealIndex: 0), "Test Comment")
     }
     
     func testFakeIndexRepositoryContract() {
