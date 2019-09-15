@@ -15,7 +15,7 @@ extension DealShell {
     }
     
     func comment(_ commentIndex: Int, atDealIndex dealIndex: Int) -> String? {
-        deals[dealIndex].comments?[commentIndex]
+        deals[dealIndex].comments[commentIndex].text
     }
 }
 

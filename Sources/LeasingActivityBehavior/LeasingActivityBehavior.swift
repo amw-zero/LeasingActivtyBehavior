@@ -50,27 +50,18 @@ public class DealShell {
     public func addComment(_ comment: String, toDealWithId dealId: Int) {
         if let dealIndex = deals.firstIndex(where: { $0.id == dealId }) {
             let deal = deals[dealIndex]
-            let comments: [String]
-            if let dealComments = deal.comments {
-                comments = dealComments + [comment]
-            } else {
-                comments = [comment]
-            }
             deals[dealIndex] = Deal(
                 id: deal.id,
                 requirementSize: deal.requirementSize,
                 tenantName: deal.tenantName,
-                comments: comments
+                comments: deal.comments + [Comment(text: comment)]
             )
         }
     }
     
     public func createDeal(requirementSize: Int, tenantName: String) {
-        let params: [String: Any] = [
-            "requirementSize": requirementSize,
-            "tenantName": tenantName
-        ]
-        guard let dealData = try? JSONSerialization.data(withJSONObject: params, options: []) else {
+        let deal = Deal(requirementSize: requirementSize, tenantName: tenantName)
+        guard let dealData = try? JSONEncoder().encode(deal) else {
             return
         }
         serverRepository.createDeal(data: dealData) { responseResult in
@@ -149,13 +140,17 @@ public enum NetworkResult<T> {
     case success(T)
 }
 
+public struct Comment: Codable {
+    let text: String
+}
+
 public struct Deal: Codable {
     public let id: Int?
     public let requirementSize: Int
     public let tenantName: String
-    public let comments: [String]?
+    public let comments: [Comment]
     
-    public init(id: Int?, requirementSize: Int, tenantName: String, comments: [String] = []) {
+    public init(id: Int? = nil, requirementSize: Int, tenantName: String, comments: [Comment] = []) {
         self.id = id
         self.requirementSize = requirementSize
         self.tenantName = tenantName
