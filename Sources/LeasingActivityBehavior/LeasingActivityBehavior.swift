@@ -3,6 +3,31 @@ import Foundation
 public enum DealFilter {
     case all
     case tenantName(String)
+    
+    init(fromQueryParams params: String?) {
+        guard let params = params else {
+            self = .all
+            return
+        }
+
+        let queryComponents = URLComponents(string: "?\(params)")?.queryItems
+        let tenantNameFilter = queryComponents?.filter { $0.name == "tenantName" }.first
+        
+        if let tenantName = tenantNameFilter?.value {
+            self = .tenantName(tenantName)
+        } else {
+            self = .all
+        }
+    }
+}
+
+func filterQuery(from filter: DealFilter) -> String? {
+    var queryParam: String? = nil
+    if case let .tenantName(tenantName) = filter {
+        queryParam = "tenantName=\(tenantName)"
+    }
+    
+    return queryParam?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
 }
 
 public class DealShell {
@@ -42,7 +67,7 @@ public class DealShell {
     }
     
     public func viewDeals(filter: DealFilter = .all) {
-        serverRepository.viewDeals(filter: filter) { responseResult in
+        serverRepository.viewDeals(queryParams: filterQuery(from: filter)) { responseResult in
             switch responseResult {
             case let .success(data):
                 let deals = (try? JSONDecoder().decode([Deal].self, from: data)) ?? []
@@ -88,7 +113,8 @@ public struct DealServer: ServerRepository {
         }
     }
     
-    public func viewDeals(filter: DealFilter, onComplete: @escaping (NetworkResult<Data>) -> Void) {
+    public func viewDeals(queryParams: String?, onComplete: @escaping (NetworkResult<Data>) -> Void) {
+        let filter = DealFilter(fromQueryParams: queryParams)
         indexRepository(filter) { dealData in
             guard let dealData = try? JSONEncoder().encode(dealData) else {
                 onComplete(.error)
@@ -121,7 +147,7 @@ public protocol ServerRepository {
     var successfulResponse: Bool { get set }
 
     func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
-    func viewDeals(filter: DealFilter, onComplete: @escaping (NetworkResult<Data>) -> Void)
+    func viewDeals(queryParams: String?, onComplete: @escaping (NetworkResult<Data>) -> Void)
 }
 
 public func indexRepositoryContract(_ repository: @escaping ([Deal], DealFilter, @escaping DealServer.DealsFunc) -> Void, onComplete: @escaping (Bool) -> Void) {
