@@ -20,20 +20,24 @@ let dealCreateRepository: (Deal, @escaping (Deal) -> Void) -> Void = { deal, onC
     onComplete(dealWithId)
 }
 
+func fakeDealIndexRepository(deals: [Deal], filter: DealFilter, onComplete: @escaping DealServer.DealsFunc) -> Void {
+    switch filter {
+    case .all:
+        onComplete(deals)
+    case let .tenantName(name):
+        onComplete(deals.filter { $0.tenantName == name })
+    }
+}
+
 func makeDealIndexRepository(deals: [Deal]) -> (DealFilter, @escaping DealServer.DealsFunc) -> Void {
     return { filter, onComplete in
-        switch filter {
-        case .all:
-            onComplete(deals)
-        case let .tenantName(name):
-            onComplete(deals.filter { $0.tenantName == name })
-        }
+        fakeDealIndexRepository(deals: deals, filter: filter, onComplete: onComplete)
     }
 }
 
 let dealIndexRepository = makeDealIndexRepository(deals: [
     Deal.make(id: 1, requirementSize: 100),
-    Deal.make(id: 2, requirementSize: 200),
+    Deal.make(id: 2, requirementSize: 200)
 ])
 
 func makeDealShell(
@@ -110,7 +114,7 @@ final class LeasingActivityBehaviorTests: XCTestCase {
     
     func testFakeIndexRepositoryContract() {
         let expectation = self.expectation(description: "Index Repository Contract")
-        indexRepositoryContract(makeDealIndexRepository) { success in
+        indexRepositoryContract(fakeDealIndexRepository) { success in
             expectation.fulfill()
             XCTAssert(success)
         }
