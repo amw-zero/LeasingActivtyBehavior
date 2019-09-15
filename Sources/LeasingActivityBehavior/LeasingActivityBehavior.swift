@@ -141,7 +141,7 @@ public enum NetworkResult<T> {
 }
 
 public struct Comment: Codable {
-    let text: String
+    public let text: String
 }
 
 public struct Deal: Codable {
