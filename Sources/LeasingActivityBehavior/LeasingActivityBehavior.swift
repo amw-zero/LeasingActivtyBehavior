@@ -34,10 +34,16 @@ public class DealShell {
     let serverRepository: ServerRepository
     var deals: [Deal] = [] {
         didSet {
-            subscription(deals)
+            dealsSubscription(deals)
         }
     }
-    public var subscription: ([Deal]) -> Void = { _ in }
+    var selectedDeal: Deal? = nil {
+        didSet {
+            selectedDealSubscription(selectedDeal)
+        }
+    }
+    public var dealsSubscription: ([Deal]) -> Void = { _ in }
+    public var selectedDealSubscription: (Deal?) -> Void = { _ in }
     
     var dealCount: Int {
         return deals.count
@@ -50,12 +56,14 @@ public class DealShell {
     public func addComment(_ comment: String, toDealWithId dealId: Int) {
         if let dealIndex = deals.firstIndex(where: { $0.id == dealId }) {
             let deal = deals[dealIndex]
-            deals[dealIndex] = Deal(
+            let newDeal = Deal(
                 id: deal.id,
                 requirementSize: deal.requirementSize,
                 tenantName: deal.tenantName,
                 comments: deal.comments + [Comment(text: comment)]
             )
+            deals[dealIndex] = newDeal
+            selectedDeal = newDeal
         }
     }
     
