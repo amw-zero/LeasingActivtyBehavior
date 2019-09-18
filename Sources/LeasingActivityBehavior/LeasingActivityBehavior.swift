@@ -31,8 +31,13 @@ func filterQuery(from filter: DealFilter) -> String? {
 }
 
 public struct DealShellState {
-    var deals: [Deal] = []
-    var selectedDeal: Deal? = nil
+    var deals: [Deal]
+    var selectedDeal: Deal?
+    
+    public init(deals: [Deal] = [], selectedDeal: Deal? = nil) {
+        self.deals = deals
+        self.selectedDeal = selectedDeal
+    }
 }
 
 public class DealShell {
