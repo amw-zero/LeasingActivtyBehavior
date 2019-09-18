@@ -58,6 +58,10 @@ public class DealShell {
         self.serverRepository = serverRepository
     }
     
+    public func setSelectedDeal(_ deal: Deal) {
+        state.selectedDeal = deal
+    }
+    
     public func addComment(_ comment: String, toDealWithId dealId: Int) {
         if let dealIndex = state.deals.firstIndex(where: { $0.id == dealId }) {
             let deal = state.deals[dealIndex]
