@@ -3,25 +3,23 @@ import XCTest
 
 extension DealShell {
     func hasDeal(id: Int) -> Bool {
-        deals.contains { $0.id == id }
+        state.deals.contains { $0.id == id }
     }
     
     func requirementSize(at index: Int) -> Int {
-        deals[index].requirementSize
+        state.deals[index].requirementSize
     }
     
     func tenantName(at index: Int) -> String {
-        deals[index].tenantName
+        state.deals[index].tenantName
     }
     
     func comment(_ commentIndex: Int, atDealIndex dealIndex: Int) -> String? {
-        deals[dealIndex].comments[commentIndex].text
+        state.deals[dealIndex].comments[commentIndex].text
     }
-}
-
-extension Deal {
-    func comment(_ commentIndex: Int) -> String? {
-        comments[commentIndex].text
+    
+    func selectedDealComment(_ commentIndex: Int) -> String? {
+        state.selectedDeal?.comments[commentIndex].text
     }
 }
 
@@ -130,7 +128,7 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         shell.addComment("Test Comment", toDealWithId: 1)
         
         XCTAssertEqual(shell.comment(0, atDealIndex: 0), "Test Comment")
-        XCTAssertEqual(shell.selectedDeal!.comment(0), "Test Comment")
+        XCTAssertEqual(shell.selectedDealComment(0), "Test Comment")
     }
     
     func testFakeIndexRepositoryContract() {

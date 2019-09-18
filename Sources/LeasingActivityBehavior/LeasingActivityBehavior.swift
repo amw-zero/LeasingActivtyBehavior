@@ -30,23 +30,19 @@ func filterQuery(from filter: DealFilter) -> String? {
     return queryParam?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
 }
 
+public struct DealShellState {
+    var deals: [Deal] = []
+    var selectedDeal: Deal? = nil
+}
+
 public class DealShell {
     let serverRepository: ServerRepository
-    var deals: [Deal] = [] {
-        didSet {
-            dealsSubscription(deals)
-        }
-    }
-    var selectedDeal: Deal? = nil {
-        didSet {
-            selectedDealSubscription(selectedDeal)
-        }
-    }
-    public var dealsSubscription: ([Deal]) -> Void = { _ in }
-    public var selectedDealSubscription: (Deal?) -> Void = { _ in }
+    var state = DealShellState()
+
+    public var subscription: (DealShellState) -> Void = { _ in }
     
     var dealCount: Int {
-        return deals.count
+        return state.deals.count
     }
     
     public init(serverRepository: ServerRepository) {
@@ -54,16 +50,16 @@ public class DealShell {
     }
     
     public func addComment(_ comment: String, toDealWithId dealId: Int) {
-        if let dealIndex = deals.firstIndex(where: { $0.id == dealId }) {
-            let deal = deals[dealIndex]
+        if let dealIndex = state.deals.firstIndex(where: { $0.id == dealId }) {
+            let deal = state.deals[dealIndex]
             let newDeal = Deal(
                 id: deal.id,
                 requirementSize: deal.requirementSize,
                 tenantName: deal.tenantName,
                 comments: deal.comments + [Comment(text: comment)]
             )
-            deals[dealIndex] = newDeal
-            selectedDeal = newDeal
+            state.deals[dealIndex] = newDeal
+            state.selectedDeal = newDeal
         }
     }
     
@@ -76,7 +72,7 @@ public class DealShell {
             switch responseResult {
             case let .success(data):
                 let deal = try? JSONDecoder().decode(Deal.self, from: data)
-                if let deal = deal { self.deals += [deal] }
+                if let deal = deal { self.state.deals += [deal] }
             default:
                 break
             }
@@ -88,7 +84,7 @@ public class DealShell {
             switch responseResult {
             case let .success(data):
                 let deals = (try? JSONDecoder().decode([Deal].self, from: data)) ?? []
-                self.deals = deals
+                self.state.deals = deals
             default:
                 break
             }
