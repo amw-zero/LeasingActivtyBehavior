@@ -42,7 +42,11 @@ public struct DealShellState {
 
 public class DealShell {
     let serverRepository: ServerRepository
-    var state = DealShellState()
+    var state = DealShellState() {
+        didSet {
+            subscription(state)
+        }
+    }
 
     public var subscription: (DealShellState) -> Void = { _ in }
     
