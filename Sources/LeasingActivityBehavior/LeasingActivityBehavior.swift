@@ -33,10 +33,12 @@ func filterQuery(from filter: DealFilter) -> String? {
 public struct DealShellState {
     public var deals: [Deal]
     public var selectedDeal: Deal?
+    public var errorMessage: String?
     
-    public init(deals: [Deal] = [], selectedDeal: Deal? = nil) {
+    public init(deals: [Deal] = [], selectedDeal: Deal? = nil, errorMessage: String? = nil) {
         self.deals = deals
         self.selectedDeal = selectedDeal
+        self.errorMessage = errorMessage
     }
 }
 
@@ -61,14 +63,26 @@ public class DealShell {
     public func addComment(_ comment: String, toDealWithId dealId: Int) {
         if let dealIndex = state.deals.firstIndex(where: { $0.id == dealId }) {
             let deal = state.deals[dealIndex]
+            let comment = Comment(text: comment)
             let newDeal = Deal(
                 id: deal.id,
                 requirementSize: deal.requirementSize,
                 tenantName: deal.tenantName,
-                comments: deal.comments + [Comment(text: comment)]
+                comments: deal.comments + [comment]
             )
+            guard let commentData = try? JSONEncoder().encode(comment) else {
+                return
+            }
+            
+            serverRepository.addComment(toDealWithId: dealId, data: commentData) { result in
+                
+            }
+            
+            
             state.deals[dealIndex] = newDeal
             state.selectedDeal = newDeal
+        } else {
+            state.errorMessage = "Unable to add comment"
         }
     }
     
@@ -105,15 +119,43 @@ public struct DealServer: ServerRepository {
     public var successfulResponse: Bool = true
     public typealias DealFunc = (Deal) -> Void
     public typealias DealsFunc = ([Deal]) -> Void
+    public typealias CommentFunc = (Comment) -> Void
+    
     public typealias DealCreateRepository = (Deal, @escaping DealFunc) -> Void
     public typealias DealIndexRepository = (DealFilter, @escaping DealsFunc) -> Void
+    public typealias CommentCreateRepository = (Comment, @escaping CommentFunc) -> Void
 
     let createRepository: DealCreateRepository
     let indexRepository: DealIndexRepository
+    let commentCreateRepository: CommentCreateRepository
     
-    public init(createRepository: @escaping DealCreateRepository, indexRepository: @escaping DealIndexRepository) {
+    public init(
+        createRepository: @escaping DealCreateRepository,
+        indexRepository: @escaping DealIndexRepository,
+        commentCreateRepository: @escaping CommentCreateRepository
+    ) {
         self.createRepository = createRepository
         self.indexRepository = indexRepository
+        self.commentCreateRepository = commentCreateRepository
+    }
+    
+    public func addComment(
+        toDealWithId dealId: Int,
+        data: Data,
+        onComplete: @escaping (NetworkResult<Data>) -> Void
+    ) {
+        guard let comment = try? JSONDecoder().decode(Comment.self, from: data) else {
+            onComplete(.error)
+            return
+        }
+        
+        commentCreateRepository(comment) { savedComment in
+            guard let commentData = try? JSONEncoder().encode(savedComment) else {
+                onComplete(.error)
+                return
+            }
+            onComplete(.success(commentData))
+        }
     }
     
     public func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void) {
@@ -137,8 +179,8 @@ public struct DealServer: ServerRepository {
     
     public func viewDeals(queryParams: String?, onComplete: @escaping (NetworkResult<Data>) -> Void) {
         let filter = DealFilter(fromQueryParams: queryParams)
-        indexRepository(filter) { dealData in
-            guard let dealData = try? JSONEncoder().encode(dealData) else {
+        indexRepository(filter) { deals in
+            guard let dealData = try? JSONEncoder().encode(deals) else {
                 onComplete(.error)
                 return
             }
@@ -154,14 +196,20 @@ public enum NetworkResult<T> {
 }
 
 public struct Comment: Codable {
+    public let id: Int?
     public let text: String
+    
+    public init(id: Int? = nil, text: String) {
+        self.id = id
+        self.text = text
+    }
 }
 
 public struct Deal: Codable {
     public let id: Int?
     public let requirementSize: Int
     public let tenantName: String
-    public let comments: [Comment]
+    public var comments: [Comment]
     
     public init(id: Int? = nil, requirementSize: Int, tenantName: String, comments: [Comment] = []) {
         self.id = id
@@ -169,16 +217,22 @@ public struct Deal: Codable {
         self.tenantName = tenantName
         self.comments = comments
     }
+    
+    public mutating func addComment(_ comment: Comment) {
+        comments.append(comment)
+    }
 }
 
 public protocol ServerRepository {
-    var successfulResponse: Bool { get set }
-
     func createDeal(data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
     func viewDeals(queryParams: String?, onComplete: @escaping (NetworkResult<Data>) -> Void)
+    func addComment(toDealWithId: Int, data: Data, onComplete: @escaping (NetworkResult<Data>) -> Void)
 }
 
-public func indexRepositoryContract(_ repository: @escaping ([Deal], DealFilter, @escaping DealServer.DealsFunc) -> Void, onComplete: @escaping (Bool) -> Void) {
+public func indexRepositoryContract(
+    _ repository: @escaping ([Deal], DealFilter, @escaping DealServer.DealsFunc) -> Void,
+    onComplete: @escaping (Bool) -> Void
+) {
     func verifyAllFilter(onComplete: @escaping (Bool) -> Void) {
         let deals = [Deal.make()]
         repository(deals, .all) { indexDeals in
@@ -197,6 +251,16 @@ public func indexRepositoryContract(_ repository: @escaping ([Deal], DealFilter,
         verifyTenantNameFilter { tenantNameFilterSucceeded in
             onComplete(allFilterSucceeded && tenantNameFilterSucceeded)
         }
+    }
+}
+
+public func commentCreateRepositoryContract(
+    _ repository: DealServer.CommentCreateRepository,
+    onComplete: @escaping (Bool) -> Void
+) {
+    let newComment = Comment(text: "Test Comment")
+    repository(newComment) { comment in
+        onComplete(newComment.text == comment.text && comment.id != nil)
     }
 }
 

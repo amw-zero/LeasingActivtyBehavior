@@ -21,7 +21,13 @@ extension DealShell {
     func selectedDealComment(_ commentIndex: Int) -> String? {
         state.selectedDeal?.comments[commentIndex].text
     }
+    
+    var errorMessage: String? {
+        state.errorMessage
+    }
 }
+
+let defaultDealFixture = Deal.make(id: 1, requirementSize: 100)
 
 let dealCreateRepository: (Deal, @escaping (Deal) -> Void) -> Void = { deal, onComplete in
     let dealWithId = Deal.make(id: 1, requirementSize: deal.requirementSize)
@@ -43,17 +49,27 @@ func makeDealIndexRepository(deals: [Deal]) -> (DealFilter, @escaping DealServer
     }
 }
 
-let dealIndexRepository = makeDealIndexRepository(deals: [
-    Deal.make(id: 1, requirementSize: 100),
-    Deal.make(id: 2, requirementSize: 200)
-])
+let dealIndexRepository = makeDealIndexRepository(deals: [defaultDealFixture])
+
+func makeCommentCreateRepository() -> DealServer.CommentCreateRepository {
+    var id = 1
+    return { comment, onComplete in
+        onComplete(Comment(id: id, text: comment.text))
+        id += 1
+    }
+}
 
 func makeDealShell(
     isResponseSuccessful: Bool = true,
     createRepository: @escaping DealServer.DealCreateRepository = dealCreateRepository,
-    indexRepository: @escaping DealServer.DealIndexRepository = dealIndexRepository
+    indexRepository: @escaping DealServer.DealIndexRepository = dealIndexRepository,
+    dealContext: [Deal] = [defaultDealFixture]
 ) -> DealShell {
-    var server = DealServer(createRepository: createRepository, indexRepository: indexRepository)
+    var server = DealServer(
+        createRepository: createRepository,
+        indexRepository: makeDealIndexRepository(deals: dealContext),
+        commentCreateRepository: makeCommentCreateRepository()
+    )
     server.successfulResponse = isResponseSuccessful
 
     return DealShell(serverRepository: server)
@@ -83,15 +99,10 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         
         XCTAssertEqual(shell.requirementSize(at: 0), 100)
         XCTAssertEqual(shell.tenantName(at: 0), "Company")
-        
-        XCTAssertEqual(shell.requirementSize(at: 1), 200)
-        XCTAssertEqual(shell.tenantName(at: 1), "Company")
     }
     
     func testViewingDealListWithNoDeals() {
-        let shell = makeDealShell(indexRepository: { _, onComplete in
-            onComplete([Deal]())
-        })
+        let shell = makeDealShell(dealContext: [])
 
         shell.viewDeals()
 
@@ -99,10 +110,10 @@ final class LeasingActivityBehaviorTests: XCTestCase {
     }
     
     func testFilteringDealListByTenantNameWhenResultsAreFound() {
-        let shell = makeDealShell(indexRepository: makeDealIndexRepository(deals: [
+        let shell = makeDealShell(dealContext: [
             Deal.make(tenantName: "Tenant 1"),
             Deal.make(tenantName: "Tenant 2"),
-        ]))
+        ])
         
         shell.viewDeals(filter: .tenantName("Tenant 2"))
         
@@ -110,19 +121,19 @@ final class LeasingActivityBehaviorTests: XCTestCase {
     }
     
     func testFilteringDealListByTenantNameWhenResultsAreNotFound() {
-        let shell = makeDealShell(indexRepository: makeDealIndexRepository(deals: [
+        let shell = makeDealShell(dealContext: [
             Deal.make(tenantName: "Tenant 1"),
             Deal.make(tenantName: "Tenant 2"),
-        ]))
+        ])
         
         shell.viewDeals(filter: .tenantName("Tenant 3"))
         
         XCTAssertEqual(shell.dealCount, 0)
     }
     
-    func testAddingACommentToADeal() {
-        let deal = Deal.make(id: 1, requirementSize: 123, tenantName: "Test Tenant")
-        let shell = makeDealShell(indexRepository: makeDealIndexRepository(deals: [deal]))
+    func testAddingACommentToADealSuccessfully() {
+        let deal = Deal.make(id: 1)
+        let shell = makeDealShell(dealContext: [deal])
 
         shell.viewDeals()
         shell.addComment("Test Comment", toDealWithId: 1)
@@ -131,9 +142,30 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         XCTAssertEqual(shell.selectedDealComment(0), "Test Comment")
     }
     
+    func testAddingACommentToADealWhenDealIsNotPresentOnClient() {
+        let deal = Deal.make(id: 1)
+        let shell = makeDealShell(dealContext: [deal])
+
+        shell.viewDeals()
+        shell.addComment("Test Comment", toDealWithId: 2)
+        
+        XCTAssertEqual(shell.errorMessage, "Unable to add comment")
+    }
+    
+    // Need to test finding deal and adding comment
     func testFakeIndexRepositoryContract() {
         let expectation = self.expectation(description: "Index Repository Contract")
         indexRepositoryContract(fakeDealIndexRepository) { success in
+            expectation.fulfill()
+            XCTAssert(success)
+        }
+        
+        wait(for: [expectation], timeout: 5.0)
+    }
+    
+    func testFakeCommentCreateRepository() {
+        let expectation = self.expectation(description: "Index Repository Contract")
+        commentCreateRepositoryContract(makeCommentCreateRepository()) { success in
             expectation.fulfill()
             XCTAssert(success)
         }
