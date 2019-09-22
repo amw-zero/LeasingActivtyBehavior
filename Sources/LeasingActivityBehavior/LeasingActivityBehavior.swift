@@ -217,10 +217,6 @@ public struct Deal: Codable {
         self.tenantName = tenantName
         self.comments = comments
     }
-    
-    public mutating func addComment(_ comment: Comment) {
-        comments.append(comment)
-    }
 }
 
 public protocol ServerRepository {
