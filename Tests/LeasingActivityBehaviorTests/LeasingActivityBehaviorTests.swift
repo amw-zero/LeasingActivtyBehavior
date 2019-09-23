@@ -152,7 +152,6 @@ final class LeasingActivityBehaviorTests: XCTestCase {
         XCTAssertEqual(shell.errorMessage, "Unable to add comment")
     }
     
-    // Need to test finding deal and adding comment
     func testFakeIndexRepositoryContract() {
         let expectation = self.expectation(description: "Index Repository Contract")
         indexRepositoryContract(fakeDealIndexRepository) { success in
